@@ -25,6 +25,7 @@
   "model_dir": "gpt-codex-clippy",
 
   "train_set": "gpt-codex.train.index",
+  "val_set": "gpt-codex.val.index",
 
   "eval_harness_tasks": [
     "lambada",
