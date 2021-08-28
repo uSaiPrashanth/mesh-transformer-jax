@@ -77,12 +77,7 @@ class TFRecordLoader:
 class TFRecordNewInputs(TFRecordLoader):
     def __init__(self, index_fname, batch_size, sample_size, restore_state=None):
         def tf_parse(example_proto):
-            features = {
-                "text": tf.io.VarLenFeature(tf.int64)
-            }
-            parsed_features = tf.io.parse_single_example(example_proto, features)
-
-            return tf.cast(tf.sparse.to_dense(tf.sparse.reorder(parsed_features["text"])), tf.uint32)
+            return tf.io.parse_tensor(example_proto,out_type=tf.int32)
 
         super().__init__(index_fname, batch_size, tf_parse, restore_state=restore_state)
 
