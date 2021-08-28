@@ -19,16 +19,12 @@
   "weight_decay": 0.1,
   "total_steps": 350000,
 
-  "tpu_size": 256,
+  "tpu_size": 8,
 
-  "bucket": "neo-models",
-  "model_dir": "mesh_jax_pile_6B_rotary",
+  "bucket": "gpt-codex",
+  "model_dir": "gpt-codex-clippy",
 
-  "train_set": "pile.train.index",
-  "val_set": {
-    "pile": "pile.val.index",
-    "owt": "openwebtext2_new_inputs.val.index"
-  },
+  "train_set": "gpt-codex.train.index",
 
   "eval_harness_tasks": [
     "lambada",
@@ -44,7 +40,7 @@
   "ckpt_every": 500,
   "keep_every": 10000,
 
-  "name": "GPT3_6B_pile_rotary",
-  "wandb_project": "mesh-transformer-jax",
+  "name": "gpt-codex-clippy",
+  "wandb_project": "gpt-codex-clippy",
   "comment": ""
 }
