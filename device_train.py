@@ -291,7 +291,7 @@ if __name__ == "__main__":
         print(f"Eval fn compiled in {time.time() - start:.06}s")
 
         project = params.get("wandb_project", "mesh-transformer-jax")
-        wandb.init(project=project, name=params["name"], config=params)
+        wandb.init()
 
         G_noise_avg = None
         S_noise_avg = None
