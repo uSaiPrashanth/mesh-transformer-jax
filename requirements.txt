@@ -20,3 +20,4 @@ ftfy
 fastapi
 uvicorn
 lm_dataformat
+jax==0.2.12
