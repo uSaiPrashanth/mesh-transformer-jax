@@ -42,7 +42,7 @@ At this point you should have remote access to the TPU VM!
 
 11. Move to the new directory with `cd mesh-transformer-jax` and run `pip install -r requirements.txt`. Since the requirements.txt file doesn't pin the exact jax version required for finetuning, run `pip install jax==0.2.12` and you'll be all set.
 
-   11.1. Make sure you are running on tensorflow version 2.5.0 with keras version 2.6.0 This is the only version that worked for me
+   1. Make sure you are running on tensorflow version 2.5.0 with keras version 2.6.0 This is the only version that worked for me
 
 12. Finally, run `python3 device_train.py --config=YOUR_CONFIG.json --tune-model-path=gs://YOUR-BUCKET/step_383500/`. If everything is set up correctly this will begin the fine-tuning process. First the model has to be loaded into memory; when `loading network` displayed on the console it took about 10-15 minutes before the next step, setting up WandB for logging. Option 3 allows you to skip that if you aren't using WandB. A step 1 checkpoint will save, and the real training will start. If you have a small dataset, this will go by quickly; TPU VMs can train at a rate of ~5000 tokens/second.
 
