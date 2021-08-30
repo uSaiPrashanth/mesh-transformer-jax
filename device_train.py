@@ -314,8 +314,6 @@ if __name__ == "__main__":
                     val_loss = np.array(val_loss).mean()
                     print(f"validation loss for step {step}, set {name}: {val_loss}")
 
-                    run.log({f'val/loss_{name}': float(val_loss)}, step)
-
             if step == total_steps:
                 print("training completed!")
                 exit()
