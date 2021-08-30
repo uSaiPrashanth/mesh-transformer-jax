@@ -394,7 +394,6 @@ if __name__ == "__main__":
                 "sequences_processed": sequences_processed,
                 "tokens_processed": tokens_processed,
             }
-            wandb_stats.update(noise_scale_stats)
-
             run.log(wandb_stats, step)
+            wandb_stats.update(noise_scale_stats)
             wandb.finish()
