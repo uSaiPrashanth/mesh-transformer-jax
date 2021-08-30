@@ -6,7 +6,6 @@ import jax
 import numpy as np
 import optax
 
-import wandb
 from tqdm import tqdm
 
 
@@ -290,8 +289,6 @@ if __name__ == "__main__":
             val_set.reset()
         print(f"Eval fn compiled in {time.time() - start:.06}s")
 
-        project = params.get("wandb_project", "mesh-transformer-jax")
-        run = wandb.init(project=project, name=params["name"], reinit=False,config=params)
 
         G_noise_avg = None
         S_noise_avg = None
@@ -394,6 +391,3 @@ if __name__ == "__main__":
                 "sequences_processed": sequences_processed,
                 "tokens_processed": tokens_processed,
             }
-            run.log(wandb_stats, step)
-            wandb_stats.update(noise_scale_stats)
-            wandb.finish()
