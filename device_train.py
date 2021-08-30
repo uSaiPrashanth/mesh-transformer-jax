@@ -6,6 +6,7 @@ import jax
 import numpy as np
 import optax
 
+import wandb
 from tqdm import tqdm
 
 
@@ -289,6 +290,8 @@ if __name__ == "__main__":
             val_set.reset()
         print(f"Eval fn compiled in {time.time() - start:.06}s")
 
+        project = params.get("wandb_project", "mesh-transformer-jax")
+        wandb.init(project=project, name=params["name"], config=params)
 
         G_noise_avg = None
         S_noise_avg = None
@@ -313,6 +316,8 @@ if __name__ == "__main__":
 
                     val_loss = np.array(val_loss).mean()
                     print(f"validation loss for step {step}, set {name}: {val_loss}")
+
+                    wandb.log({f'val/loss_{name}': float(val_loss)}, step)
 
             if step == total_steps:
                 print("training completed!")
@@ -389,3 +394,6 @@ if __name__ == "__main__":
                 "sequences_processed": sequences_processed,
                 "tokens_processed": tokens_processed,
             }
+            wandb_stats.update(noise_scale_stats)
+
+            wandb.log(wandb_stats, step)
