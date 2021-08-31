@@ -1,12 +1,115 @@
 import jax
+import transformers
+import zstandard as zstd
+import jsonlines
+import io
+import subprocess
+import shlex
 import tensorflow as tf
 import numpy as np
-from transformers import GPT2TokenizerFast
-import itertools
+from google.cloud import storage
+class WriteJsonlzst:
+    """
+    Writes (text) file streams with jsonl.zst extension into tfrecords
+
+    Attributes:
+    
+        encoder: The huggingface encoder to utilize for encoding the text
+        split_size: Length of each tokenized tensor
+    """
+    def __init__(self,encoder=None,split_size=2048):
+        if(encoder is None):
+            encoder = transformers.GPT2TokenizerFast.from_pretrained('gpt2',max_length=1e9)
+        self.encoder = encoder
+        self.split_size = split_size
+
+    def _decompress_to_serialized_text(self,jsonl_zst_stream,key='text',para_joiner = '\n\n'):
+        """
+        Returns a serialized tokenized text generator from jsonl.zst streams
+        """
+        cctx = zstd.ZstdDecompressor()
+        reader = io.BufferedReader(cctx.stream_reader(jsonl_zst_stream))
+        rdr = jsonlines.Reader(reader) #Creating a complex text retrival stream
+
+        tokens = tf.constant([],dtype=tf.int32) #tokens of text from stream
+        
+        for ob in rdr:#iterating through text
+            
+            text = ob[key]
+            if isinstance(text, list):
+                text = para_joiner.join(text)
+            text += ' <|endoftext|>'
 
 
+            tokens = tf.concat([tokens,
+                                self.encoder(text,return_tensors='tf',return_attention_mask=False).input_ids[0]],
+                                axis = 0) #convert text into tokens and utilize previously left tokens
+            
+            splits = [self.split_size for i in range(self.split_size,len(tokens),self.split_size)] 
+                #create a splits array whose length is equal to the number of {self.split_size} sized arrays
+
+            if(len(splits) > 0):
+                splits.append(len(tokens)-len(splits)*self.split_size) 
+                    #adding the left over tokens length to correctly split the array
+
+                seq= tf.split(tokens,splits)
+                data,tokens = seq[:-1],seq[-1]
+                    #splitting and reusing to leftover tokens in next iteration (if present)
+
+                for i in data:
+                    yield tf.io.serialize_tensor(i).numpy()
+                        #serialize and return data
+    def processlink(self,link):
+        """
+        Converts the url link to Google cloud storage path and checks if the path exists.
+        If the file doesn't exist, it is created
+
+        Returns the Google cloud storage path for the file
+        """
+        bucket_name = 'gpt-guru'
+        train = link.rfind('train') != link.find('train') 
+        #Code to find if the link references a training record.
+        #Very specific to https://the-eye.eu/public/AI/training_data/code_clippy_data/code_clippy_dedup_data/
+        #Change it to reflect your training data location
+
+        path = f"gs://{bucket_name}/{'train' if train else 'test'}/{link[link.rfind('/')+1:-10]}.tfrecords" #get appropriate path
+        
+        
+        storage_client = storage.Client()
+        
+        bucket = storage_client.bucket(bucket_name)
+        stats = storage.Blob(bucket=bucket, name=path[6+len(bucket_name):]).exists(storage_client)
+        #Check if the path exists
+
+        if(stats):
+            #Path exists. return it
+            return path
+        else:
+            #Path doesn't exist. Create one and return it
+
+            command = "wget" + " -O -" + " "+ link
+            command = shlex.split(command)
+            res = subprocess.Popen(command,stdout=subprocess.PIPE)
+            out,err = res.communicate()
+            while(res.poll() is None):
+                pass
+            #Download the file
+
+            with tf.io.TFRecordWriter(path) as writer:
+                self._write(io.BytesIO(out),writer)
+            #Create the tfrecord
+
+            return path
+
+    def _write(self,jsonl_zst_stream,writer):
+        """
+        Writes text from jsonl_zst_stream
+        """ 
+        for i in self._decompress_to_serialized_text(jsonl_zst_stream):
+            writer.write(i)
 class TFRecordLoader:
     def __init__(self, index_fname, batch_size, parse_fn, map_fn=None, restore_state=None):
+        self.writer = WriteJsonlzst() #addition: to check and create files at runtime
         if restore_state is not None:
             self.file_idx = restore_state["file_idx"]
             self.file_idx_init = False
@@ -40,7 +143,7 @@ class TFRecordLoader:
     def sample_once(self):
         for i in self.clean_index:
             compression = "ZLIB" if "zstd" in i else ""
-
+            i = self.writer.processlink(i) #Gets Google cloud storage path from the url link
             file = tf.data.TFRecordDataset(i, compression_type=compression).map(self.parse_fn, num_parallel_calls=tf.data.AUTOTUNE)
             file = file.apply(tf.data.experimental.dense_to_ragged_batch(np.prod(self.bs), drop_remainder=True))
             file = file.prefetch(10)
@@ -78,7 +181,6 @@ class TFRecordNewInputs(TFRecordLoader):
     def __init__(self, index_fname, batch_size, sample_size, restore_state=None):
         def tf_parse(example_proto):
             return tf.io.parse_tensor(example_proto,out_type=tf.int32)
-
         super().__init__(index_fname, batch_size, tf_parse, restore_state=restore_state)
 
 
