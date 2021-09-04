@@ -66,6 +66,9 @@ class WriteJsonlzst:
 
         Returns the Google cloud storage path for the file
         """
+        if(link[:2] == 'gs'):
+            #Compatibility to previous state (the path is a gcs path, return it)
+            return link
         bucket_name = 'gpt-guru'
         train = link.rfind('train') != link.find('train') 
         #Code to find if the link references a training record.
@@ -81,8 +84,8 @@ class WriteJsonlzst:
         stats = storage.Blob(bucket=bucket, name=path[6+len(bucket_name):]).exists(storage_client)
         #Check if the path exists
 
-        if(stats or link[:2] == 'gs'):
-            #Path exists. (or it is a gs path)return it
+        if(stats):
+            #Path exists.return it
             return path
         else:
             #Path doesn't exist. Create one and return it
