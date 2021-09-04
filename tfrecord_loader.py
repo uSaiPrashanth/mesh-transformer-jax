@@ -81,8 +81,8 @@ class WriteJsonlzst:
         stats = storage.Blob(bucket=bucket, name=path[6+len(bucket_name):]).exists(storage_client)
         #Check if the path exists
 
-        if(stats):
-            #Path exists. return it
+        if(stats or link[:2] == 'gs'):
+            #Path exists. (or it is a gs path)return it
             return path
         else:
             #Path doesn't exist. Create one and return it
